@@ -1,1 +1,245 @@
 //El main hue hue hue hue
+#include <allegro.h>
+
+const int TAM= 25;
+const int COLUMNAS= 28;
+const int FILAS= 32;
+
+///////////////////////////Funciones d einicializacion del main para allegro
+
+////////////////////////////////////////////////// Preparacion del buffering
+BITMAP *buffer;// preparacion del buffer
+
+void update_screen(void)
+{
+	blit(buffer, screen, 0, 0, 0, 0, SCREEN_W, SCREEN_H); // blit the buffer to the screen
+}
+
+int init_double_buffering()
+{
+	// create the memory buffer
+	buffer = create_bitmap(SCREEN_W, SCREEN_H);
+ 
+	if(!buffer)
+		return FALSE;
+ 
+	return TRUE;
+}
+
+int page_flipping()
+{
+    if (!init_double_buffering())
+	{
+		set_gfx_mode(GFX_TEXT,0,0,0,0);
+		allegro_message("Unable to initialize page flipping.\n");
+		return 1;
+	}
+}
+
+//inicializacion pantalla    
+int pantalla(){
+    int ret;
+    ret= set_gfx_mode(GFX_AUTODETECT_WINDOWED, 700, 800, 0, 0); 
+    if (ret != 0)
+    {
+            allegro_message("could not set graphic mode");
+            allegro_exit();
+            return 0;
+    }
+}
+
+//funcion que coge todas las inicializaciones
+void inicio(){
+     allegro_init();
+     install_keyboard();
+     pantalla();
+     page_flipping();
+}
+	
+
+
+
+//////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////
+
+
+//Esta funcion pinta una cuadricula que facilita la observacion en cuanto a pixeles y sprites    
+void cuadricula(){
+     int t=TAM;
+     int q=TAM;
+     while(t<=SCREEN_W){
+     line(buffer, t, 0, t, SCREEN_H, makecol(255, 255, 255));
+     t+=TAM;
+     }
+     while(q<=SCREEN_H){
+     line(buffer, 0, q, SCREEN_W, q, makecol(255, 255, 255));
+     q+=25;
+     }
+     
+}
+
+//////Funcions que pinten les peçes
+void cuadrado(float x, float y, int color){
+     rectfill(buffer, x*TAM, y*TAM, x*TAM+TAM , y*TAM+TAM , color);
+     }
+
+void rectangulo(float x, float y, int color){
+     cuadrado(x,y, color);
+     cuadrado(x+1, y, color);
+     }
+          
+/////////////clase de la barra que el jugador controla y sus metodos
+
+        
+class barra{
+      private:
+       int x;
+       int y;
+       int color;
+       public:
+              //constructor de la barra
+       barra(){x=12; y=30; color= makecol(0, 255, 255);}
+       
+       int getBarrax(){return x;}
+       int getBarray(){return y;}
+       // funcion que pinta la barra
+       void pintar_barra();
+       // funcion que mueve la barra
+       void mover_barra();
+       // funcion que detecta la colision de la barra
+       bool colision_barra();
+       
+       
+};
+       
+void barra::pintar_barra(){
+                   rectangulo(x,y, color);
+                   rectangulo(x+2,y, color);
+}
+
+void barra::mover_barra(){
+     if(key[KEY_RIGHT]){x++;}
+     if(key[KEY_LEFT]){x--;}
+     }
+
+bool barra::colision_barra(){
+     if(x<0||x>COLUMNAS-4){return TRUE;}
+     return FALSE;
+     }
+
+/////////////////////////////////////////////clase de la pelota que rebota y sus metodos
+
+class bola: public barra{
+      private:
+              float x;
+              float y;
+              //pendiente
+              float m;
+              // lo que se suma para formar la recta adecuada
+              float n;
+              //lo que se augmenta en el movimiento de x
+              float d;
+              int color;
+      public:
+             //constructor de la pelota
+             bola(){x=13; y=29; m=-1; n=y-m*x; d=1; color= makecol(150, 150, 150);}
+             // funcion que pinta la bola
+             void pintar_bola(){cuadrado(x,y,color);}
+             //funcion que dirige el movimiento de la bola
+             void mover_bola();
+             //funciones que detectan las diferentes colisiones
+             bool colision_vertical();
+             bool colision_horizontal();
+             bool colisionBarra();
+};
+
+bool bola::colision_vertical(){
+     if(y<0){return TRUE;}
+     return FALSE;
+}
+
+bool bola::colision_horizontal(){
+     if(x<0|| x>COLUMNAS){return TRUE;}
+     }
+     
+bool bola::colisionBarra(){
+     for(int i=0; i<4; i++)
+     {
+              if(x==getBarrax()+i && y==getBarray()){return TRUE;}
+     }
+     return FALSE;
+}
+     
+
+void bola::mover_bola(){
+     float x_=x;
+     float y_=y;
+     y=m*x+n;
+     x+=d;
+     if(colision_vertical() || colisionBarra()){
+                             m= 1/(-m); 
+                             x=x_; 
+                             y=y_; 
+                             n=y-m*x;
+                             }
+     else if(colision_horizontal()){
+                               
+                               x=x_; 
+                               y=y_;
+                               m= 1/(-m);  
+                               n=y-m*x; 
+                               d=-d;
+                               }
+     }
+
+
+///////////////////////////Funcion que se encarga de repintar todo lo que hay en el buffer, con cambios incluidos
+
+void repintar(bola& A, barra& B){
+     
+     cuadricula();
+     rectangulo(3,5, makecol(255, 0, 0));
+     B.pintar_barra();
+     A.pintar_bola();
+     }
+
+          
+/////////////////////////Main     
+       
+       
+int main()
+{
+    inicio();
+    
+    bola bol;
+    barra jug;
+    
+    cuadricula();
+    rectangulo(3,5, makecol(255, 0, 0));
+    
+    jug.pintar_barra();
+    bol.pintar_bola();
+    //ciclo principal del juego
+    while(!key[KEY_ESC])
+    {
+                        bola copia= bol;
+                        barra copy= jug;
+                        jug.mover_barra();
+                        bol.mover_bola();
+                        
+                        if(jug.colision_barra()){jug=copy;}
+                        
+                        
+                        //aqui se aplica el buffering
+                        clear(buffer);
+                        //aqui se añaden las funciones que repintan a medida que hay cambios en pantalla
+                        repintar(bol,jug);
+                        update_screen();
+                        
+                        rest(50);
+    }
+    
+    allegro_exit();
+    return 0;
+}
+END_OF_MAIN()
